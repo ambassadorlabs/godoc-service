@@ -16,7 +16,7 @@ func main() {
 	goroot := "/var/run/godoc-root"
 	ensureDir(goroot)
 
-	token := os.Getenv("GITHUB_TOKEN")
+	token := strings.TrimSpace(os.Getenv("GITHUB_TOKEN"))
 	repos := os.Getenv("GITHUB_REPOS")
 
 	cmd := exec.Command("git", "config", "--global",
@@ -60,6 +60,7 @@ func sync(goroot, repos string, w io.Writer) {
 	base := filepath.Join(goroot, "src/github.com")
 
 	for _, repo := range strings.Split(repos, ";") {
+		repo = strings.TrimSpace(repo)
 		w.Write([]byte("Updating " + repo + "=============\n"))
 		dir := filepath.Join(base, repo)
 		ensureDir(dir)
