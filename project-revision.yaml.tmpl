@@ -1,0 +1,68 @@
+---
+apiVersion: getambassador.io/v2
+kind: Mapping
+metadata:
+  name: '{{.Revision.Name}}'
+spec:
+  ambassador_id:
+  - '{{.AmbassadorID}}'
+  prefix: '{{.Revision.Prefix}}'
+  service: '{{.Revision.Name}}'
+  timeout_ms: 900000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: '{{.Revision.Name}}'
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    projects.getambassador.io/ambassador_id: '{{.AmbassadorID}}'
+    projects.getambassador.io/revision-uid: '{{.Revision.UID}}'
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: '{{.Revision.Name}}'
+spec:
+  selector:
+    matchLabels:
+      projects.getambassador.io/ambassador_id: '{{.AmbassadorID}}'
+      projects.getambassador.io/revision-uid: '{{.Revision.UID}}'
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        projects.getambassador.io/ambassador_id: '{{.AmbassadorID}}'
+        projects.getambassador.io/revision-uid: '{{.Revision.UID}}'
+        projects.getambassador.io/service: "true"
+    spec:
+      containers:
+      - name: app
+        image: '{{.Revision.Image}}'
+        env:
+        - name: AMB_PROJECT_PREVIEW
+          value: '{{.Revision.IsPreview}}'
+        - name: AMB_PROJECT_REPO
+          value: '{{.Project.Repo}}'
+        - name: AMB_PROJECT_REF
+          value: '{{.Revision.Ref}}'
+        - name: AMB_PROJECT_REV
+          value: '{{.Revision.Rev}}'
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: godoc-service-config
+              key: githubToken
+        - name: GITHUB_REPOS
+          valueFrom:
+            secretKeyRef:
+              name: godoc-service-config
+              key: githubRepos
+      imagePullSecrets:
+      - name: '{{.Revision.PullSecret}}'
