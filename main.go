@@ -126,13 +126,14 @@ func (t *transformer) WriteHeader(statusCode int) {
 }
 
 var re = regexp.MustCompile(`((?:src|href)\s*=\s*)"/([^/])`)
+var prefix = os.Getenv("AMB_PROJECT_PREFIX")
 
 func (t *transformer) Transform() {
 	bytes := t.buffer.Bytes()
 	contentType := t.wrapped.Header().Get("Content-Type")
 	if strings.Contains(contentType, "text/html") {
 		t.wrapped.Header().Del("Content-Length")
-		bytes = re.ReplaceAll(bytes, []byte(`$1"./$2`))
+		bytes = re.ReplaceAll(bytes, []byte(fmt.Sprintf(`$1"%s$2`, prefix)))
 	}
 	t.wrapped.Write(bytes)
 }

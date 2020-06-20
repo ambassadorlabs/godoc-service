@@ -54,6 +54,8 @@ spec:
           value: '{{.Revision.Ref}}'
         - name: AMB_PROJECT_REV
           value: '{{.Revision.Rev}}'
+        - name: AMB_PROJECT_PREFIX
+          value: '{{.Revision.Prefix}}'
         - name: GITHUB_TOKEN
           valueFrom:
             secretKeyRef:
