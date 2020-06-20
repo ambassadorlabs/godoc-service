@@ -50,7 +50,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		t := &transformer{wrapped: w}
+		t := &transformer{wrapped: w, request: r}
 		proxy.ServeHTTP(t, r)
 		t.Transform()
 	})
@@ -108,6 +108,7 @@ func dirExists(dirname string) bool {
 
 type transformer struct {
 	wrapped    http.ResponseWriter
+	request    *http.Request
 	buffer     bytes.Buffer
 	statusCode int
 }
@@ -125,8 +126,9 @@ func (t *transformer) WriteHeader(statusCode int) {
 	t.wrapped.WriteHeader(statusCode)
 }
 
-var re = regexp.MustCompile(`((?:src|href)\s*=\s*)"/([^/])`)
+var re = regexp.MustCompile(`((?:src|href|action)\s*=\s*)"/([^/])`)
 var prefix = os.Getenv("AMB_PROJECT_PREFIX")
+var playre = regexp.MustCompile(`ajax\('(/compile|/vet)'`)
 
 func (t *transformer) Transform() {
 	bytes := t.buffer.Bytes()
@@ -134,6 +136,9 @@ func (t *transformer) Transform() {
 	if strings.Contains(contentType, "text/html") {
 		t.wrapped.Header().Del("Content-Length")
 		bytes = re.ReplaceAll(bytes, []byte(fmt.Sprintf(`$1"%s$2`, prefix)))
+	} else if strings.HasSuffix(t.request.URL.Path, "/lib/godoc/playground.js") {
+		t.wrapped.Header().Del("Content-Length")
+		bytes = re.ReplaceAll(bytes, []byte(fmt.Sprintf(`ajax('%s$1'`, prefix)))
 	}
 	t.wrapped.Write(bytes)
 }
