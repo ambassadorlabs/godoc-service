@@ -130,7 +130,7 @@ var re = regexp.MustCompile(`((?:src|href)\s*=\s*)"/([^/])`)
 func (t *transformer) Transform() {
 	bytes := t.buffer.Bytes()
 	contentType := t.wrapped.Header().Get("Content-Type")
-	if contentType == "text/html" {
+	if strings.Contains(contentType, "text/html") {
 		t.wrapped.Header().Del("Content-Length")
 		bytes = re.ReplaceAll(bytes, []byte(`$1"./$2`))
 	}
