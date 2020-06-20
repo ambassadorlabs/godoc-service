@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -47,7 +49,11 @@ func main() {
 		},
 	}
 
-	http.Handle("/", proxy)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		t := &transformer{wrapped: w}
+		proxy.ServeHTTP(t, r)
+		t.Transform()
+	})
 
 	http.HandleFunc("/sync", func(w http.ResponseWriter, r *http.Request) {
 		sync(goroot, repos, w)
@@ -98,4 +104,35 @@ func dirExists(dirname string) bool {
 		return false
 	}
 	return info.IsDir()
+}
+
+type transformer struct {
+	wrapped    http.ResponseWriter
+	buffer     bytes.Buffer
+	statusCode int
+}
+
+func (t *transformer) Header() http.Header {
+	return t.wrapped.Header()
+}
+
+func (t *transformer) Write(bytes []byte) (int, error) {
+	return t.buffer.Write(bytes)
+}
+
+func (t *transformer) WriteHeader(statusCode int) {
+	t.statusCode = statusCode
+	t.wrapped.WriteHeader(statusCode)
+}
+
+var re = regexp.MustCompile(`((?:src|href)\s*=\s*)"/([^/])`)
+
+func (t *transformer) Transform() {
+	bytes := t.buffer.Bytes()
+	contentType := t.wrapped.Header().Get("Content-Type")
+	if contentType == "text/html" {
+		t.wrapped.Header().Del("Content-Length")
+		bytes = re.ReplaceAll(bytes, []byte(`$1"./$2`))
+	}
+	t.wrapped.Write(bytes)
 }
