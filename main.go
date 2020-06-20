@@ -138,7 +138,7 @@ func (t *transformer) Transform() {
 		bytes = re.ReplaceAll(bytes, []byte(fmt.Sprintf(`$1"%s$2`, prefix)))
 	} else if strings.HasSuffix(t.request.URL.Path, "/lib/godoc/playground.js") {
 		t.wrapped.Header().Del("Content-Length")
-		bytes = re.ReplaceAll(bytes, []byte(fmt.Sprintf(`ajax('%s$1'`, prefix)))
+		bytes = playre.ReplaceAll(bytes, []byte(fmt.Sprintf(`ajax('%s$1'`, prefix)))
 	}
 	t.wrapped.Write(bytes)
 }
