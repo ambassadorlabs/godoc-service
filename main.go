@@ -131,6 +131,11 @@ var prefix = os.Getenv("AMB_PROJECT_PREFIX")
 var playre = regexp.MustCompile(`ajax\('(/compile|/vet)'`)
 
 func (t *transformer) Transform() {
+	location := t.Header().Get("Location")
+	if len(location) > 0 && location[0] == '/' {
+		t.Header().Set("Location", prefix+location[1:])
+	}
+
 	bytes := t.buffer.Bytes()
 	contentType := t.wrapped.Header().Get("Content-Type")
 	if strings.Contains(contentType, "text/html") {
