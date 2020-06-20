@@ -15,29 +15,31 @@ import (
 )
 
 func main() {
-	goroot := "/var/run/godoc-root"
+	goroot := "/tmp/godoc-root"
 	ensureDir(goroot)
 
 	token := strings.TrimSpace(os.Getenv("GITHUB_TOKEN"))
 	repos := os.Getenv("GITHUB_REPOS")
 
-	cmd := exec.Command("git", "config", "--global",
-		fmt.Sprintf("url.https://%s:x-oauth-basic@github.com/.insteadOf", token),
-		"https://github.com/")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Start()
-	if err != nil {
-		log.Fatal(err)
+	if len(token) > 0 {
+		cmd := exec.Command("git", "config", "--global",
+			fmt.Sprintf("url.https://%s:x-oauth-basic@github.com/.insteadOf", token),
+			"https://github.com/")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Start()
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	sync(goroot, repos, os.Stdout)
 
-	cmd = exec.Command("godoc", "-http", "localhost:8081", "-goroot", ".", "-index", "-play")
+	cmd := exec.Command("godoc", "-http", "localhost:8081", "-goroot", ".", "-index")
 	cmd.Dir = goroot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -123,12 +125,10 @@ func (t *transformer) Write(bytes []byte) (int, error) {
 
 func (t *transformer) WriteHeader(statusCode int) {
 	t.statusCode = statusCode
-	t.wrapped.WriteHeader(statusCode)
 }
 
 var re = regexp.MustCompile(`((?:src|href|action)\s*=\s*)"/([^/])`)
 var prefix = os.Getenv("AMB_PROJECT_PREFIX")
-var playre = regexp.MustCompile(`ajax\('(/compile|/vet)'`)
 
 func (t *transformer) Transform() {
 	location := t.Header().Get("Location")
@@ -141,9 +141,8 @@ func (t *transformer) Transform() {
 	if strings.Contains(contentType, "text/html") {
 		t.wrapped.Header().Del("Content-Length")
 		bytes = re.ReplaceAll(bytes, []byte(fmt.Sprintf(`$1"%s$2`, prefix)))
-	} else if strings.HasSuffix(t.request.URL.Path, "/lib/godoc/playground.js") {
-		t.wrapped.Header().Del("Content-Length")
-		bytes = playre.ReplaceAll(bytes, []byte(fmt.Sprintf(`ajax('%s$1'`, prefix)))
 	}
+
+	t.wrapped.WriteHeader(t.statusCode)
 	t.wrapped.Write(bytes)
 }
