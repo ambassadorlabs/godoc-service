@@ -14,6 +14,7 @@ import (
 	"strings"
 )
 
+// Runs godoc and serve results over HTTP
 func main() {
 	goroot := "/tmp/godoc-root"
 	ensureDir(goroot)
@@ -64,6 +65,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
+// Synchronize source from GitHub
 func sync(goroot, repos string, w io.Writer) {
 	base := filepath.Join(goroot, "src/github.com")
 
